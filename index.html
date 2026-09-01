@@ -1,654 +1,218 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Monitoring Gebyar Unspec</title>
-    <!-- Tailwind CSS & Icons -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .zebra-even { background-color: #ffffff; }
-        .zebra-odd { background-color: #f8fafc; }
-        .zebra-even:hover, .zebra-odd:hover { background-color: #f1f5f9; }
-        .drag-over { border-color: #10b981 !important; background-color: #ecfdf5 !important; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Monitoring Gebyar Unspec</title>
+  
+  <!-- Tailwind CSS & Font Awesome -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- SheetJS untuk membaca file Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .zebra-even { background-color: #ffffff; }
+    .zebra-odd { background-color: #f8fafc; }
+    .zebra-even:hover, .zebra-odd:hover { background-color: #f1f5f9; }
+  </style>
 </head>
 <body class="p-4 md:p-6">
-    <div class="max-w-[95%] mx-auto space-y-6">
+  <div class="max-w-[95%] mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-red-600 to-rose-800 text-white rounded-xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold">Dashboard Monitoring Gebyar Unspec</h1>
+        <p class="text-red-100 text-sm mt-1">Detail Outstanding HI | Auto Filter Status Redaman</p>
+      </div>
+    </div>
+
+    <!-- Section Upload File -->
+    <div class="bg-white p-6 rounded-xl shadow-md space-y-4">
+      <h2 class="text-lg font-semibold text-gray-700">Upload File Excel (.xlsx / .xls)</h2>
+      <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer" />
+    </div>
+
+    <!-- Ringkasan Status -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-emerald-100 border-l-4 border-emerald-500 p-4 rounded-r-xl">
+        <p class="text-xs text-emerald-700 font-bold uppercase">TOTAL SPEC</p>
+        <p id="countSpec" class="text-2xl font-black text-emerald-800">0</p>
+      </div>
+      <div class="bg-rose-100 border-l-4 border-rose-500 p-4 rounded-r-xl">
+        <p class="text-xs text-rose-700 font-bold uppercase">TOTAL UNSPEC</p>
+        <p id="countUnspec" class="text-2xl font-black text-rose-800">0</p>
+      </div>
+      <div class="bg-amber-100 border-l-4 border-amber-500 p-4 rounded-r-xl">
+        <p class="text-xs text-amber-700 font-bold uppercase">TOTAL OFFLINE</p>
+        <p id="countOffline" class="text-2xl font-black text-amber-800">0</p>
+      </div>
+      <div class="bg-gray-100 border-l-4 border-gray-500 p-4 rounded-r-xl">
+        <p class="text-xs text-gray-700 font-bold uppercase">TOTAL NULL</p>
+        <p id="countNull" class="text-2xl font-black text-gray-800">0</p>
+      </div>
+    </div>
+
+    <!-- Tabel Data -->
+    <div class="bg-white rounded-xl shadow-md overflow-hidden">
+      <div class="overflow-x-auto max-h-[600px]">
+        <table class="w-full text-left text-xs border-collapse text-gray-600">
+          <thead class="sticky top-0 bg-slate-800 text-white uppercase text-[11px] tracking-wider">
+            <tr id="tableHeader">
+              <th class="p-3">No Data</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr>
+              <td class="p-4 text-center text-gray-400">Silakan upload file Excel untuk melihat data.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ------------------------------------------------------------------
+    // 1. Fungsi Kalkulasi Status Berdasarkan Nilai Kolom UKUR
+    // ------------------------------------------------------------------
+    function hitungStatus(ukurVal) {
+      if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
+        return 'NULL';
+      }
+
+      const strVal = String(ukurVal).trim();
+
+      if (strVal === '-') {
+        return 'OFFLINE';
+      }
+
+      const numVal = parseFloat(strVal);
+
+      if (isNaN(numVal)) {
+        return 'NULL';
+      }
+
+      // Pembulatan ke 2 desimal untuk menghindari isu presisi float
+      const roundedVal = Math.round(numVal * 100) / 100;
+
+      // UNSPEC: nilai -23.00 ke bawah/lebih redup (misal: -23.00, -25.37, -30.45)
+      if (roundedVal <= -23.00) {
+        return 'UNSPEC';
+      }
+
+      // SPEC: rentang -14.00 s/d -22.59 (misal: -17.95, -21.02)
+      if (roundedVal <= -14.00 && roundedVal >= -22.59) {
+        return 'SPEC';
+      }
+
+      return 'NULL';
+    }
+
+    // ------------------------------------------------------------------
+    // 2. Event Listener Upload File Excel
+    // ------------------------------------------------------------------
+    document.getElementById('excelFileInput').addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+
+      reader.onload = function(evt) {
+        const data = new Uint8Array(evt.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
         
-        <!-- Header -->
-        <div class="bg-gradient-to-r from-red-600 to-rose-800 text-white rounded-xl p-6 shadow-lg flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <img src="https://lh3.googleusercontent.com/d/1jGWo55nUfNKfipDRCDRanY1qGzS9mI1m" alt="Logo" class="h-10 w-auto bg-white p-1 rounded-lg shadow-sm object-contain">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold">Dashboard Monitoring Gebyar Unspec</h1>
-                    <p class="text-red-100 text-sm mt-1">Detail Outstanding HI | POWERED BY SA GLADAG</p>
-                </div>
-            </div>
-            <div class="flex flex-wrap gap-2 items-center">
-                <button onclick="clearAllData()" class="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg shadow text-xs font-medium transition">
-                    <i class="fa-solid fa-trash-can"></i> Reset Data
-                </button>
-                <button onclick="openModal()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg shadow text-xs font-medium transition">
-                    <i class="fa-solid fa-file-upload"></i> Upload CSV / Excel
-                </button>
-            </div>
-        </div>
+        // Ambil Sheet Pertama
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
 
-        <!-- Section 1: KPI & Report Summary -->
-        <div class="space-y-3">
-            <div class="flex justify-between items-center">
-                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider"><i class="fa-solid fa-chart-line text-red-600"></i> Laporan Evaluasi Performa</h2>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-semibold text-slate-500">Periode Evaluasi:</span>
-                    <select id="report-period" onchange="renderTable()" class="px-2.5 py-1 text-xs border rounded-lg bg-white font-semibold text-slate-700 shadow-sm">
-                        <option value="today">Hari Ini</option>
-                        <option value="weekly">7 Hari Terakhir (Mingguan)</option>
-                        <option value="monthly">Bulan Ini</option>
-                        <option value="all" selected>Semua Data</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-ticket"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Total Tiket</div>
-                        <div id="stat-total" class="text-xl font-bold text-slate-800">0</div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-folder-open"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Open (Belum Status)</div>
-                        <div id="stat-open" class="text-xl font-bold text-amber-600">0</div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-circle-check"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Close (Order/Spec)</div>
-                        <div id="stat-close" class="text-xl font-bold text-emerald-600">0</div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-percent"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-slate-500 uppercase">% Resolution Rate</div>
-                        <div id="stat-rate" class="text-xl font-bold text-purple-600">0%</div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                    <div class="w-11 h-11 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Workzone Aktif</div>
-                        <div id="stat-workzone" class="text-xl font-bold text-slate-800">0</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Section 2: Visualisasi Grafik Tren & Perbandingan -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Grafik 1: Tren Reported Date -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-blue-500"></i> Tren Tiket Masuk (Reported)
-                </h3>
-                <div class="h-56 relative">
-                    <canvas id="chartReported"></canvas>
-                </div>
-            </div>
-
-            <!-- Grafik 2: Tren Closed Date -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-chart-line text-emerald-500"></i> Tren Tiket Selesai (Closed)
-                </h3>
-                <div class="h-56 relative">
-                    <canvas id="chartClosed"></canvas>
-                </div>
-            </div>
-
-            <!-- Grafik 3: Perbandingan Tiket Masuk vs Closed -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
-                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
-                    <i class="fa-solid fa-scale-balanced text-purple-600"></i> Perbandingan (Reported vs Closed)
-                </h3>
-                <div class="h-56 relative">
-                    <canvas id="chartComparison"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <!-- Filter Controls -->
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Workzone:</label>
-                    <select id="filter-workzone" onchange="renderTable()" class="px-3 py-2 border rounded-lg text-sm bg-white font-medium text-slate-700">
-                        <option value="ALL">-- SEMUA WORKZONE --</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Status Backend:</label>
-                    <select id="filter-status" onchange="renderTable()" class="px-3 py-2 border rounded-lg text-sm bg-white font-medium text-slate-700">
-                        <option value="ALL">-- SEMUA STATUS --</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Dari:</label>
-                    <input type="date" id="filter-date-start" onchange="renderTable()" class="px-2 py-1.5 border rounded-lg text-sm bg-white text-slate-700">
-                </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Sampai:</label>
-                    <input type="date" id="filter-date-end" onchange="renderTable()" class="px-2 py-1.5 border rounded-lg text-sm bg-white text-slate-700">
-                </div>
-                <div class="relative w-full md:w-64">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-3 text-slate-400"></i>
-                    <input type="text" id="search-input" oninput="renderTable()" placeholder="Cari Incident, Service ID, SN..." class="w-full pl-10 pr-4 py-2 border rounded-lg text-sm">
-                </div>
-            </div>
-        </div>
-
-        <!-- Tabel Data -->
-        <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse text-xs">
-                    <thead>
-                        <tr class="bg-slate-700 text-white font-semibold text-center uppercase tracking-wider">
-                            <th class="p-2.5">No</th>
-                            <th class="p-2.5 min-w-[110px]">Incident</th>
-                            <th class="p-2.5 min-w-[220px]">Summary</th>
-                            <th class="p-2.5 min-w-[120px]">Reported Date</th>
-                            <th class="p-2.5">Workzone</th>
-                            <th class="p-2.5">Status</th>
-                            <th class="p-2.5 min-w-[120px]">Status Date</th>
-                            <th class="p-2.5 min-w-[110px]">Service ID</th>
-                            <th class="p-2.5 min-w-[110px]">Service No</th>
-                            <th class="p-2.5">ONU RX</th>
-                            <th class="p-2.5 min-w-[180px]">Device</th>
-                            <th class="p-2.5 min-w-[140px]">SN ONT</th>
-                            <th class="p-2.5 min-w-[130px]">RK Information</th>
-                            <th class="p-2.5 min-w-[110px]">UKUR</th>
-                            <th class="p-2.5 min-w-[120px]">STATUS (EDITABLE)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-body"></tbody>
-                </table>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Modal Upload Data Drag & Drop -->
-    <div id="upload-modal" class="fixed inset-0 bg-slate-900/50 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-file-csv text-emerald-600"></i> Upload Data Outstanding</h3>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
-            </div>
-            
-            <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition duration-200">
-                <input type="file" id="file-input" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleFileSelect(this.files)">
-                <div class="space-y-2">
-                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl">
-                        <i class="fa-solid fa-cloud-arrow-up"></i>
-                    </div>
-                    <div class="text-sm font-semibold text-slate-700">Tarik & Lepas File ke Sini</div>
-                    <p class="text-xs text-slate-400">Atau klik untuk memilih file dari komputer (.csv, .xlsx)</p>
-                    <div id="selected-file-name" class="text-xs font-bold text-emerald-600 hidden pt-2"></div>
-                </div>
-            </div>
-
-            <div id="upload-status" class="text-xs text-slate-600 hidden font-medium text-center"></div>
-
-            <div class="flex justify-end gap-2 pt-2">
-                <button onclick="closeModal()" class="px-4 py-2 border rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
-                <button onclick="processUpload()" id="btn-upload-submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">Proses Upload</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const SUPABASE_URL = "https://jptzwnpngoqdytblpuso.supabase.co/rest/v1/gebyar_unspec";
-        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdHp3bnBuZ29xZHl0YmxwdXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDc2OTUsImV4cCI6MjEwMzc4MzY5NX0.qMhLVxKfqdtVFn7JzAqfdIPXhzD2uj5vB4YfqXkKMJM";
-
-        let rawData = [];
-        let selectedFile = null;
-
-        // Instance Chart.js
-        let chartReportedInstance = null;
-        let chartClosedInstance = null;
-        let chartComparisonInstance = null;
-
-        async function loadDataFromSupabase() {
-            try {
-                const response = await fetch(`${SUPABASE_URL}?select=*`, {
-                    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
-                });
-                if(response.ok) {
-                    rawData = await response.json();
-                    populateFilters();
-                    renderTable();
-                }
-            } catch(e) { console.error(e); }
+        // Baca data (header dimulai dari baris ke-2 / row index 1 seperti struktur file HI)
+        const rawJson = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        
+        if (rawJson.length <= 1) {
+          alert("File kosong atau format header tidak sesuai.");
+          return;
         }
 
-        function populateFilters() {
-            const wzSelect = document.getElementById('filter-workzone');
-            const stSelect = document.getElementById('filter-status');
-            const workzones = [...new Set(rawData.map(d => d.workzone).filter(Boolean))];
-            const statuses = [...new Set(rawData.map(d => d.status).filter(Boolean))];
-
-            wzSelect.innerHTML = '<option value="ALL">-- SEMUA WORKZONE --</option>' + workzones.map(w => `<option value="${w}">${w}</option>`).join('');
-            stSelect.innerHTML = '<option value="ALL">-- SEMUA STATUS --</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+        // Tentukan Header (misal baris ke-2 di file excel)
+        let headerRowIndex = 0;
+        for (let i = 0; i < Math.min(5, rawJson.length); i++) {
+          if (rawJson[i].includes('UKUR') || rawJson[i].includes('Incident')) {
+            headerRowIndex = i;
+            break;
+          }
         }
 
-        function renderTable() {
-            const wz = document.getElementById('filter-workzone').value;
-            const st = document.getElementById('filter-status').value;
-            const startDate = document.getElementById('filter-date-start').value;
-            const endDate = document.getElementById('filter-date-end').value;
-            const reportPeriod = document.getElementById('report-period').value;
-            const search = document.getElementById('search-input').value.toLowerCase();
+        const headers = rawJson[headerRowIndex];
+        const dataRows = rawJson.slice(headerRowIndex + 1);
 
-            const todayStr = new Date().toISOString().substring(0, 10);
+        let countSpec = 0, countUnspec = 0, countOffline = 0, countNull = 0;
 
-            const filtered = rawData.filter(d => {
-                const matchWz = wz === 'ALL' || d.workzone === wz;
-                const matchSt = st === 'ALL' || d.status === st;
-                
-                let matchDate = true;
-                if (d.reported_date) {
-                    const rDate = String(d.reported_date).substring(0, 10);
-                    if (startDate && rDate < startDate) matchDate = false;
-                    if (endDate && rDate > endDate) matchDate = false;
+        // Render Header Tabel
+        const tableHeader = document.getElementById('tableHeader');
+        tableHeader.innerHTML = headers.map(h => `<th class="p-3 whitespace-nowrap">${h || ''}</th>`).join('');
 
-                    if (reportPeriod === 'today' && rDate !== todayStr) matchDate = false;
-                    if (reportPeriod === 'weekly') {
-                        const past7 = new Date();
-                        past7.setDate(past7.getDate() - 7);
-                        if (new Date(rDate) < past7) matchDate = false;
-                    }
-                    if (reportPeriod === 'monthly') {
-                        const currentMonth = new Date().toISOString().substring(0, 7);
-                        if (!rDate.startsWith(currentMonth)) matchDate = false;
-                    }
-                }
+        // Render Isi Tabel & Hitung Status
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
 
-                const matchSearch = !search || 
-                    (d.incident && d.incident.toLowerCase().includes(search)) ||
-                    (d.service_id && String(d.service_id).toLowerCase().includes(search)) ||
-                    (d.sn_ont && d.sn_ont.toLowerCase().includes(search));
+        dataRows.forEach((row, rowIndex) => {
+          if (!row || row.length === 0) return;
 
-                return matchWz && matchSt && matchDate && matchSearch;
-            });
+          // Cari posisi indeks kolom UKUR dan STATUS
+          const ukurIdx = headers.indexOf('UKUR');
+          const statusIdx = headers.indexOf('STATUS');
 
-            // Update Executive Summary Stats
-            const totalCount = filtered.length;
-            const closeCount = filtered.filter(d => d.status_final && (d.status_final.toUpperCase() === 'ORDER' || d.status_final.toUpperCase() === 'SPEC')).length;
-            const openCount = totalCount - closeCount;
-            const ratePercent = totalCount > 0 ? Math.round((closeCount / totalCount) * 100) : 0;
+          let ukurVal = ukurIdx !== -1 ? row[ukurIdx] : null;
+          let calculatedStatus = hitungStatus(ukurVal);
 
-            document.getElementById('stat-total').innerText = totalCount;
-            document.getElementById('stat-open').innerText = openCount;
-            document.getElementById('stat-close').innerText = closeCount;
-            document.getElementById('stat-rate').innerText = ratePercent + '%';
-            document.getElementById('stat-workzone').innerText = [...new Set(filtered.map(d => d.workzone))].length;
+          // Update data kolom STATUS pada baris
+          if (statusIdx !== -1) {
+            row[statusIdx] = calculatedStatus;
+          }
 
-            // Render Rows
-            const tbody = document.getElementById('table-body');
-            tbody.innerHTML = filtered.map((d, i) => {
-                const currentStatus = d.status_final ? d.status_final.toUpperCase() : 'NULL';
-                return `
-                <tr class="${i % 2 === 0 ? 'zebra-even' : 'zebra-odd'} border-b text-center">
-                    <td class="p-2">${d.no || (i + 1)}</td>
-                    <td class="p-2 font-semibold text-blue-600">${d.incident || '-'}</td>
-                    <td class="p-2 text-left">${d.summary || '-'}</td>
-                    <td class="p-2">${d.reported_date || '-'}</td>
-                    <td class="p-2 font-medium">${d.workzone || '-'}</td>
-                    <td class="p-2"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">${d.status || '-'}</span></td>
-                    <td class="p-2">${d.status_date || '-'}</td>
-                    <td class="p-2">${d.service_id || '-'}</td>
-                    <td class="p-2">${d.service_no || '-'}</td>
-                    <td class="p-2">${d.onu_rx || '-'}</td>
-                    <td class="p-2 text-left">${d.device || '-'}</td>
-                    <td class="p-2 font-mono">${d.sn_ont || '-'}</td>
-                    <td class="p-2">${d.rk_information || '-'}</td>
-                    <td class="p-2">${d.ukur || '-'}</td>
-                    <td class="p-2">
-                        <select onchange="updateRowStatus(${d.id}, this.value)" class="px-2 py-1 rounded text-xs font-bold ${getStatusColor(currentStatus)}">
-                            <option value="NULL" ${currentStatus === 'NULL' ? 'selected' : ''}>-- NULL --</option>
-                            <option value="ORDER" ${currentStatus === 'ORDER' ? 'selected' : ''}>ORDER</option>
-                            <option value="SPEC" ${currentStatus === 'SPEC' ? 'selected' : ''}>SPEC</option>
-                        </select>
-                    </td>
-                </tr>
-            `}).join('');
+          // Hitung Ringkasan Counter
+          if (calculatedStatus === 'SPEC') countSpec++;
+          else if (calculatedStatus === 'UNSPEC') countUnspec++;
+          else if (calculatedStatus === 'OFFLINE') countOffline++;
+          else countNull++;
 
-            // Render Visual Charts
-            renderCharts(filtered);
-        }
+          // Tentukan Badge Warna untuk Kolom STATUS
+          let badgeClass = 'bg-gray-100 text-gray-700';
+          if (calculatedStatus === 'SPEC') badgeClass = 'bg-emerald-100 text-emerald-800 font-bold';
+          else if (calculatedStatus === 'UNSPEC') badgeClass = 'bg-rose-100 text-rose-800 font-bold';
+          else if (calculatedStatus === 'OFFLINE') badgeClass = 'bg-amber-100 text-amber-800 font-bold';
 
-        function getStatusColor(val) {
-            if (val === 'ORDER') return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
-            if (val === 'SPEC') return 'bg-blue-100 text-blue-800 border border-blue-300';
-            return 'bg-slate-100 text-slate-600 border border-slate-300';
-        }
+          // Render Row HTML
+          const trClass = rowIndex % 2 === 0 ? 'zebra-even' : 'zebra-odd';
+          let rowHtml = `<tr class="${trClass} border-b border-slate-100">`;
 
-        function renderCharts(data) {
-            // Grouping Data Berdasarkan Tanggal
-            const reportedGroup = {};
-            const closedGroup = {};
-            const allDatesSet = new Set();
-
-            data.forEach(d => {
-                if (d.reported_date) {
-                    const rDate = String(d.reported_date).substring(0, 10);
-                    reportedGroup[rDate] = (reportedGroup[rDate] || 0) + 1;
-                    allDatesSet.add(rDate);
-                }
-
-                const isClosed = d.status_final && (d.status_final.toUpperCase() === 'ORDER' || d.status_final.toUpperCase() === 'SPEC');
-                if (isClosed && (d.status_date || d.reported_date)) {
-                    const cDate = String(d.status_date || d.reported_date).substring(0, 10);
-                    closedGroup[cDate] = (closedGroup[cDate] || 0) + 1;
-                    allDatesSet.add(cDate);
-                }
-            });
-
-            // Urutkan Tanggal secara kronologis
-            const sortedDates = Array.from(allDatesSet).sort();
-
-            const reportedCounts = sortedDates.map(date => reportedGroup[date] || 0);
-            const closedCounts = sortedDates.map(date => closedGroup[date] || 0);
-
-            // Destroy Chart Lama Jika Ada
-            if (chartReportedInstance) chartReportedInstance.destroy();
-            if (chartClosedInstance) chartClosedInstance.destroy();
-            if (chartComparisonInstance) chartComparisonInstance.destroy();
-
-            // 1. Grafik Tren Reported Date
-            const ctxReported = document.getElementById('chartReported').getContext('2d');
-            chartReportedInstance = new Chart(ctxReported, {
-                type: 'line',
-                data: {
-                    labels: sortedDates,
-                    datasets: [{
-                        label: 'Tiket Masuk',
-                        data: reportedCounts,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // 2. Grafik Tren Closed Date
-            const ctxClosed = document.getElementById('chartClosed').getContext('2d');
-            chartClosedInstance = new Chart(ctxClosed, {
-                type: 'line',
-                data: {
-                    labels: sortedDates,
-                    datasets: [{
-                        label: 'Tiket Closed',
-                        data: closedCounts,
-                        borderColor: '#10b981',
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-
-            // 3. Grafik Perbandingan (Reported vs Closed)
-            const ctxComparison = document.getElementById('chartComparison').getContext('2d');
-            chartComparisonInstance = new Chart(ctxComparison, {
-                type: 'bar',
-                data: {
-                    labels: sortedDates,
-                    datasets: [
-                        {
-                            label: 'Reported',
-                            data: reportedCounts,
-                            backgroundColor: '#3b82f6'
-                        },
-                        {
-                            label: 'Closed',
-                            data: closedCounts,
-                            backgroundColor: '#10b981'
-                        }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        async function updateRowStatus(id, newValue) {
-            const finalVal = newValue === 'NULL' ? null : newValue;
-            try {
-                const res = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
-                    method: 'PATCH',
-                    headers: {
-                        'apikey': SUPABASE_KEY,
-                        'Authorization': `Bearer ${SUPABASE_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ status_final: finalVal })
-                });
-                if(res.ok) {
-                    const item = rawData.find(d => d.id === id);
-                    if(item) item.status_final = finalVal;
-                    renderTable();
-                } else {
-                    alert('Gagal mengupdate status!');
-                }
-            } catch(e) {
-                console.error(e);
+          headers.forEach((h, colIdx) => {
+            let val = row[colIdx] !== undefined ? row[colIdx] : '';
+            if (colIdx === statusIdx) {
+              rowHtml += `<td class="p-3 whitespace-nowrap"><span class="px-2.5 py-1 rounded-full text-[10px] ${badgeClass}">${calculatedStatus}</span></td>`;
+            } else {
+              rowHtml += `<td class="p-3 whitespace-nowrap">${val}</td>`;
             }
-        }
-// Fungsi untuk menentukan STATUS otomatis berdasarkan kolom UKUR
-function hitungStatus(ukurVal) {
-  // Jika kolom kosong, null, atau undefined
-  if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
-    return 'NULL';
-  }
+          });
 
-  const strVal = String(ukurVal).trim();
-
-  // Jika berisi tanda strip (-)
-  if (strVal === '-') {
-    return 'OFFLINE';
-  }
-
-  // Konversi nilai teks ke bentuk angka
-  const numVal = parseFloat(strVal);
-
-  if (isNaN(numVal)) {
-    return 'NULL';
-  }
-
-  // UNSPEC: nilai -23.00 ke bawah/lebih redup (misal: -23.00, -25.37, -30.45)
-  if (numVal <= -23.00) {
-    return 'UNSPEC';
-  }
-
-  // SPEC: rentang -14.00 s/d -22.59 (misal: -17.95, -21.02, -22.50)
-  if (numVal <= -14.00 && numVal >= -22.59) {
-    return 'SPEC';
-  }
-
-  return 'NULL';
-}
-
-// ==========================================
-// CONTOH PENGGUNAAN SAAT PENGOLAHAN DATA EXCEL/CSV
-// ==========================================
-// Panggil fungsi hitungStatus() saat iterasi/looping data hasil upload:
-dataExcel.forEach(row => {
-  // Ambil nilai dari kolom UKUR
-  const nilaiUkur = row['UKUR'];
-  
-  // Masukkan hasil kalkulasi ke kolom STATUS (kolom terakhir)
-  row['STATUS'] = hitungStatus(nilaiUkur);
-});
-        // --- Drag & Drop Modal Operations ---
-        const dropZone = document.getElementById('drop-zone');
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropZone.classList.add('drag-over');
-            }, false);
+          rowHtml += '</tr>';
+          tableBody.insertAdjacentHTML('beforeend', rowHtml);
         });
 
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('drag-over');
-            }, false);
-        });
+        // Update Kartu Ringkasan
+        document.getElementById('countSpec').innerText = countSpec;
+        document.getElementById('countUnspec').innerText = countUnspec;
+        document.getElementById('countOffline').innerText = countOffline;
+        document.getElementById('countNull').innerText = countNull;
+      };
 
-        dropZone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFileSelect(files);
-        });
-
-        function handleFileSelect(files) {
-            if (files.length > 0) {
-                selectedFile = files[0];
-                const fileNameDiv = document.getElementById('selected-file-name');
-                fileNameDiv.innerText = `File Terpilih: ${selectedFile.name}`;
-                fileNameDiv.classList.remove('hidden');
-            }
-        }
-
-        function openModal() {
-            document.getElementById('upload-modal').classList.remove('hidden');
-        }
-
-        function closeModal() {
-            document.getElementById('upload-modal').classList.add('hidden');
-            document.getElementById('upload-status').classList.add('hidden');
-            document.getElementById('selected-file-name').classList.add('hidden');
-            selectedFile = null;
-        }
-
-        async function processUpload() {
-            const statusDiv = document.getElementById('upload-status');
-            if(!selectedFile) {
-                alert('Pilih atau seret file CSV/Excel terlebih dahulu!');
-                return;
-            }
-
-            statusDiv.classList.remove('hidden');
-            statusDiv.innerText = 'Membaca file...';
-
-            const reader = new FileReader();
-
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
-
-                    const cleanData = jsonData.filter(row => row['Incident'] || row['No']);
-
-                    statusDiv.innerText = `Mengunggah ${cleanData.length} data ke Supabase...`;
-
-                    const payload = cleanData.map(row => ({
-                        no: row['No'] ? parseInt(row['No']) : null,
-                        incident: row['Incident'] ? String(row['Incident']) : null,
-                        summary: row['Summary'] ? String(row['Summary']) : null,
-                        reported_date: row['Reported Date'] ? String(row['Reported Date']) : null,
-                        workzone: row['Workzone'] ? String(row['Workzone']) : null,
-                        status: row['Status'] ? String(row['Status']) : null,
-                        status_date: row['Status Date'] ? String(row['Status Date']) : null,
-                        service_id: row['Service ID'] ? String(row['Service ID']) : null,
-                        service_no: row['Service No'] ? String(row['Service No']) : null,
-                        onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
-                        device: row['Device'] ? String(row['Device']) : null,
-                        sn_ont: row['SN ONT'] ? String(row['SN ONT']) : null,
-                        rk_information: row['RK Information'] ? String(row['RK Information']) : null,
-                        ukur: row['UKUR'] ? String(row['UKUR']) : null,
-                        status_final: row['STATUS'] ? String(row['STATUS']) : null
-                    }));
-
-                    const res = await fetch(SUPABASE_URL, {
-                        method: 'POST',
-                        headers: {
-                            'apikey': SUPABASE_KEY,
-                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=minimal'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if(res.ok) {
-                        alert('Data berhasil diupload!');
-                        closeModal();
-                        loadDataFromSupabase();
-                    } else {
-                        const err = await res.json();
-                        alert('Gagal upload: ' + (err.message || JSON.stringify(err)));
-                    }
-                } catch(err) {
-                    alert('Terjadi kesalahan membaca file!');
-                    console.error(err);
-                }
-            };
-            reader.readAsArrayBuffer(selectedFile);
-        }
-
-        async function clearAllData() {
-            if(confirm('Apakah Anda yakin ingin menghapus SELURUH data di Supabase?')) {
-                try {
-                    const res = await fetch(`${SUPABASE_URL}?id=gt.0`, {
-                        method: 'DELETE',
-                        headers: {
-                            'apikey': SUPABASE_KEY,
-                            'Authorization': `Bearer ${SUPABASE_KEY}`
-                        }
-                    });
-                    if(res.ok) {
-                        alert('Seluruh data berhasil dihapus.');
-                        loadDataFromSupabase();
-                    }
-                } catch(e) {
-                    alert('Gagal menghapus data.');
-                }
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', loadDataFromSupabase);
-    </script>
+      reader.readAsArrayBuffer(file);
+    });
+  </script>
 </body>
 </html>
