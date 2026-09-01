@@ -472,47 +472,49 @@
                 console.error(e);
             }
         }
-// Fungsi untuk menentukan status berdasarkan nilai UKUR
+// Fungsi untuk menentukan STATUS otomatis berdasarkan kolom UKUR
 function hitungStatus(ukurVal) {
-  // Jika kosong, null, atau undefined
+  // Jika kolom kosong, null, atau undefined
   if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
     return 'NULL';
   }
 
   const strVal = String(ukurVal).trim();
 
-  // Jika berisi tanda -
+  // Jika berisi tanda strip (-)
   if (strVal === '-') {
     return 'OFFLINE';
   }
 
-  // Konversi nilai ke angka
+  // Konversi nilai teks ke bentuk angka
   const numVal = parseFloat(strVal);
 
   if (isNaN(numVal)) {
     return 'NULL';
   }
 
-  // Cek range sesuai logika
-  // SPEC: -14.00 s/d -22.59
-  if (numVal <= -14.00 && numVal >= -22.59) {
-    return 'SPEC';
-  }
-  
-  // UNSPEC: mulai -23.00 ke bawah (misal -23.01, -25.00, -30.00)
+  // UNSPEC: nilai -23.00 ke bawah/lebih redup (misal: -23.00, -25.37, -30.45)
   if (numVal <= -23.00) {
     return 'UNSPEC';
+  }
+
+  // SPEC: rentang -14.00 s/d -22.59 (misal: -17.95, -21.02, -22.50)
+  if (numVal <= -14.00 && numVal >= -22.59) {
+    return 'SPEC';
   }
 
   return 'NULL';
 }
 
-// Contoh penggunaan saat membaca baris Excel
+// ==========================================
+// CONTOH PENGGUNAAN SAAT PENGOLAHAN DATA EXCEL/CSV
+// ==========================================
+// Panggil fungsi hitungStatus() saat iterasi/looping data hasil upload:
 dataExcel.forEach(row => {
   // Ambil nilai dari kolom UKUR
   const nilaiUkur = row['UKUR'];
   
-  // Isi otomatis kolom STATUS (kolom terakhir)
+  // Masukkan hasil kalkulasi ke kolom STATUS (kolom terakhir)
   row['STATUS'] = hitungStatus(nilaiUkur);
 });
         // --- Drag & Drop Modal Operations ---
