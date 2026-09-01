@@ -250,73 +250,76 @@
         }
 
         async function processUpload() {
-            const fileInput = document.getElementById('file-input');
-            const statusDiv = document.getElementById('upload-status');
-            if(!fileInput.files.length) {
-                alert('Pilih file CSV atau Excel terlebih dahulu!');
-                return;
+    const fileInput = document.getElementById('file-input');
+    const statusDiv = document.getElementById('upload-status');
+    if(!fileInput.files.length) {
+        alert('Pilih file CSV atau Excel terlebih dahulu!');
+        return;
+    }
+
+    statusDiv.classList.remove('hidden');
+    statusDiv.innerText = 'Membaca file...';
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+
+            // Filter hanya baris yang memiliki No / Incident (abaikan baris kosong)
+            const cleanData = jsonData.filter(row => row['Incident'] || row['No']);
+
+            statusDiv.innerText = `Mengunggah ${cleanData.length} data ke Supabase...`;
+
+            // Mapping Kolom CSV ke Supabase
+            const payload = cleanData.map(row => ({
+                no: row['No'] ? parseInt(row['No']) : null,
+                incident: row['Incident'] ? String(row['Incident']) : null,
+                summary: row['Summary'] ? String(row['Summary']) : null,
+                reported_date: row['Reported Date'] ? String(row['Reported Date']) : null,
+                workzone: row['Workzone'] ? String(row['Workzone']) : null,
+                status: row['Status'] ? String(row['Status']) : null,
+                status_date: row['Status Date'] ? String(row['Status Date']) : null,
+                service_id: row['Service ID'] ? String(row['Service ID']) : null,
+                service_no: row['Service No'] ? String(row['Service No']) : null,
+                onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
+                device: row['Device'] ? String(row['Device']) : null,
+                sn_ont: row['SN ONT'] ? String(row['SN ONT']) : null,
+                rk_information: row['RK Information'] ? String(row['RK Information']) : null,
+                ukur: row['UKUR'] ? String(row['UKUR']) : null,
+                status_final: row['STATUS'] ? String(row['STATUS']) : null
+            }));
+
+            const res = await fetch(SUPABASE_URL, {
+                method: 'POST',
+                headers: {
+                    'apikey': SUPABASE_KEY,
+                    'Authorization': `Bearer ${SUPABASE_KEY}`,
+                    'Content-Type': 'application/json',
+                    'Prefer': 'return=minimal'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if(res.ok) {
+                alert('Data berhasil diupload!');
+                closeModal();
+                loadDataFromSupabase();
+            } else {
+                const err = await res.json();
+                alert('Gagal upload: ' + (err.message || JSON.stringify(err)));
             }
-
-            statusDiv.classList.remove('hidden');
-            statusDiv.innerText = 'Membaca file...';
-
-            const file = fileInput.files[0];
-            const reader = new FileReader();
-
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array'});
-                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-
-                    statusDiv.innerText = `Mengunggah ${jsonData.length} data ke Supabase...`;
-
-                    // Mapping Kolom CSV ke Supabase
-                    const payload = jsonData.map(row => ({
-                        no: row['No'] ? parseInt(row['No']) : null,
-                        incident: row['Incident'] || null,
-                        summary: row['Summary'] || null,
-                        reported_date: row['Reported Date'] || null,
-                        workzone: row['Workzone'] || null,
-                        status: row['Status'] || null,
-                        status_date: row['Status Date'] || null,
-                        service_id: row['Service ID'] ? String(row['Service ID']) : null,
-                        service_no: row['Service No'] ? String(row['Service No']) : null,
-                        onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
-                        device: row['Device'] || null,
-                        sn_ont: row['SN ONT'] || null,
-                        rk_information: row['RK Information'] || null,
-                        ukur: row['UKUR'] || null,
-                        status_final: row['STATUS'] || null
-                    }));
-
-                    const res = await fetch(SUPABASE_URL, {
-                        method: 'POST',
-                        headers: {
-                            'apikey': SUPABASE_KEY,
-                            'Authorization': `Bearer ${SUPABASE_KEY}`,
-                            'Content-Type': 'application/json',
-                            'Prefer': 'return=minimal'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if(res.ok) {
-                        alert('Data berhasil diupload!');
-                        closeModal();
-                        loadDataFromSupabase();
-                    } else {
-                        const err = await res.json();
-                        alert('Gagal upload: ' + JSON.stringify(err));
-                    }
-                } catch(err) {
-                    alert('Terjadi kesalahan membaca file!');
-                    console.error(err);
-                }
-            };
-            reader.readAsArrayBuffer(file);
+        } catch(err) {
+            alert('Terjadi kesalahan membaca file!');
+            console.error(err);
         }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
         async function clearAllData() {
             if(confirm('Apakah Anda yakin ingin menghapus SELURUH data di Supabase?')) {
