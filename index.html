@@ -13,6 +13,7 @@
         .zebra-even { background-color: #ffffff; }
         .zebra-odd { background-color: #f8fafc; }
         .zebra-even:hover, .zebra-odd:hover { background-color: #f1f5f9; }
+        .drag-over { border-color: #10b981 !important; background-color: #ecfdf5 !important; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -37,42 +38,70 @@
             </div>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">
-                    <i class="fa-solid fa-list-check"></i>
-                </div>
-                <div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase">Total Tiket</div>
-                    <div id="stat-total" class="text-2xl font-bold text-slate-800">0</div>
-                </div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-xl font-bold">
-                    <i class="fa-solid fa-clock"></i>
-                </div>
-                <div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase">Status Backend</div>
-                    <div id="stat-backend" class="text-2xl font-bold text-slate-800">0</div>
+        <!-- Section 1: KPI & Report Summary (Harian, Mingguan, Bulanan) -->
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider"><i class="fa-solid fa-chart-line text-red-600"></i> Laporan Evaluasi Performa</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold text-slate-500">Periode Evaluasi:</span>
+                    <select id="report-period" onchange="renderTable()" class="px-2.5 py-1 text-xs border rounded-lg bg-white font-semibold text-slate-700 shadow-sm">
+                        <option value="today">Hari Ini</option>
+                        <option value="weekly">7 Hari Terakhir (Mingguan)</option>
+                        <option value="monthly">Bulan Ini</option>
+                        <option value="all" selected>Semua Data</option>
+                    </select>
                 </div>
             </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold">
-                    <i class="fa-solid fa-map-location-dot"></i>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-ticket"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Total Tiket</div>
+                        <div id="stat-total" class="text-xl font-bold text-slate-800">0</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase">Total Workzone</div>
-                    <div id="stat-workzone" class="text-2xl font-bold text-slate-800">0</div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Open (Belum Status)</div>
+                        <div id="stat-open" class="text-xl font-bold text-amber-600">0</div>
+                    </div>
                 </div>
-            </div>
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-                <div class="w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xl font-bold">
-                    <i class="fa-solid fa-microchip"></i>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-circle-check"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Close (Order/Spec)</div>
+                        <div id="stat-close" class="text-xl font-bold text-emerald-600">0</div>
+                    </div>
                 </div>
-                <div>
-                    <div class="text-xs font-semibold text-slate-500 uppercase">Total Device</div>
-                    <div id="stat-device" class="text-2xl font-bold text-slate-800">0</div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-percent"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500 uppercase">% Resolution Rate</div>
+                        <div id="stat-rate" class="text-xl font-bold text-purple-600">0%</div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
+                    <div class="w-11 h-11 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <div>
+                        <div class="text-[11px] font-semibold text-slate-500 uppercase">Workzone Aktif</div>
+                        <div id="stat-workzone" class="text-xl font-bold text-slate-800">0</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -87,7 +116,7 @@
                     </select>
                 </div>
                 <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600 uppercase">Status:</label>
+                    <label class="text-xs font-bold text-slate-600 uppercase">Status Backend:</label>
                     <select id="filter-status" onchange="renderTable()" class="px-3 py-2 border rounded-lg text-sm bg-white font-medium text-slate-700">
                         <option value="ALL">-- SEMUA STATUS --</option>
                     </select>
@@ -107,7 +136,7 @@
             </div>
         </div>
 
-        <!-- Tabel Data 15 Kolom -->
+        <!-- Tabel Data 15 Kolom dengan Dropdown STATUS -->
         <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
@@ -127,7 +156,7 @@
                             <th class="p-2.5 min-w-[140px]">SN ONT</th>
                             <th class="p-2.5 min-w-[130px]">RK Information</th>
                             <th class="p-2.5 min-w-[110px]">UKUR</th>
-                            <th class="p-2.5">STATUS</th>
+                            <th class="p-2.5 min-w-[120px]">STATUS (EDITABLE)</th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
@@ -137,18 +166,29 @@
 
     </div>
 
-    <!-- Modal Upload Data -->
+    <!-- Modal Upload Data Drag & Drop -->
     <div id="upload-modal" class="fixed inset-0 bg-slate-900/50 hidden flex items-center justify-center p-4 z-50">
-        <div class="bg-white rounded-xl shadow-xl max-w-md w-full p-6 space-y-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-lg w-full p-6 space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-file-csv text-emerald-600"></i> Upload Data Outstanding</h3>
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
-            <div>
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Pilih File (.csv, .xlsx):</label>
-                <input type="file" id="file-input" accept=".csv, .xlsx, .xls" class="w-full text-sm border p-2 rounded-lg">
+            
+            <!-- Drag and Drop Dropzone Zone -->
+            <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition duration-200">
+                <input type="file" id="file-input" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleFileSelect(this.files)">
+                <div class="space-y-2">
+                    <div class="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-2xl">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                    </div>
+                    <div class="text-sm font-semibold text-slate-700">Tarik & Lepas File ke Sini</div>
+                    <p class="text-xs text-slate-400">Atau klik untuk memilih file dari komputer (.csv, .xlsx)</p>
+                    <div id="selected-file-name" class="text-xs font-bold text-emerald-600 hidden pt-2"></div>
+                </div>
             </div>
-            <div id="upload-status" class="text-xs text-slate-600 hidden font-medium"></div>
+
+            <div id="upload-status" class="text-xs text-slate-600 hidden font-medium text-center"></div>
+
             <div class="flex justify-end gap-2 pt-2">
                 <button onclick="closeModal()" class="px-4 py-2 border rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-50">Batal</button>
                 <button onclick="processUpload()" id="btn-upload-submit" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">Proses Upload</button>
@@ -161,6 +201,7 @@
         const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwdHp3bnBuZ29xZHl0YmxwdXNvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMDc2OTUsImV4cCI6MjEwMzc4MzY5NX0.qMhLVxKfqdtVFn7JzAqfdIPXhzD2uj5vB4YfqXkKMJM";
 
         let rawData = [];
+        let selectedFile = null;
 
         async function loadDataFromSupabase() {
             try {
@@ -190,7 +231,10 @@
             const st = document.getElementById('filter-status').value;
             const startDate = document.getElementById('filter-date-start').value;
             const endDate = document.getElementById('filter-date-end').value;
+            const reportPeriod = document.getElementById('report-period').value;
             const search = document.getElementById('search-input').value.toLowerCase();
+
+            const todayStr = new Date().toISOString().substring(0, 10);
 
             const filtered = rawData.filter(d => {
                 const matchWz = wz === 'ALL' || d.workzone === wz;
@@ -201,6 +245,18 @@
                     const rDate = String(d.reported_date).substring(0, 10);
                     if (startDate && rDate < startDate) matchDate = false;
                     if (endDate && rDate > endDate) matchDate = false;
+
+                    // Filter Evaluasi Period (Harian, Mingguan, Bulanan)
+                    if (reportPeriod === 'today' && rDate !== todayStr) matchDate = false;
+                    if (reportPeriod === 'weekly') {
+                        const past7 = new Date();
+                        past7.setDate(past7.getDate() - 7);
+                        if (new Date(rDate) < past7) matchDate = false;
+                    }
+                    if (reportPeriod === 'monthly') {
+                        const currentMonth = new Date().toISOString().substring(0, 7);
+                        if (!rDate.startsWith(currentMonth)) matchDate = false;
+                    }
                 }
 
                 const matchSearch = !search || 
@@ -211,13 +267,23 @@
                 return matchWz && matchSt && matchDate && matchSearch;
             });
 
-            document.getElementById('stat-total').innerText = filtered.length;
-            document.getElementById('stat-backend').innerText = filtered.filter(d => d.status === 'BACKEND').length;
-            document.getElementById('stat-workzone').innerText = [...new Set(filtered.map(d => d.workzone))].length;
-            document.getElementById('stat-device').innerText = [...new Set(filtered.map(d => d.device))].length;
+            // Update Report Cards Evaluasi
+            const totalCount = filtered.length;
+            const closeCount = filtered.filter(d => d.status_final && (d.status_final.toUpperCase() === 'ORDER' || d.status_final.toUpperCase() === 'SPEC')).length;
+            const openCount = totalCount - closeCount;
+            const ratePercent = totalCount > 0 ? Math.round((closeCount / totalCount) * 100) : 0;
 
+            document.getElementById('stat-total').innerText = totalCount;
+            document.getElementById('stat-open').innerText = openCount;
+            document.getElementById('stat-close').innerText = closeCount;
+            document.getElementById('stat-rate').innerText = ratePercent + '%';
+            document.getElementById('stat-workzone').innerText = [...new Set(filtered.map(d => d.workzone))].length;
+
+            // Render Rows
             const tbody = document.getElementById('table-body');
-            tbody.innerHTML = filtered.map((d, i) => `
+            tbody.innerHTML = filtered.map((d, i) => {
+                const currentStatus = d.status_final ? d.status_final.toUpperCase() : 'NULL';
+                return `
                 <tr class="${i % 2 === 0 ? 'zebra-even' : 'zebra-odd'} border-b text-center">
                     <td class="p-2">${d.no || (i + 1)}</td>
                     <td class="p-2 font-semibold text-blue-600">${d.incident || '-'}</td>
@@ -233,12 +299,80 @@
                     <td class="p-2 font-mono">${d.sn_ont || '-'}</td>
                     <td class="p-2">${d.rk_information || '-'}</td>
                     <td class="p-2">${d.ukur || '-'}</td>
-                    <td class="p-2">${d.status_final || '-'}</td>
+                    <td class="p-2">
+                        <select onchange="updateRowStatus(${d.id}, this.value)" class="px-2 py-1 rounded text-xs font-bold ${getStatusColor(currentStatus)}">
+                            <option value="NULL" ${currentStatus === 'NULL' ? 'selected' : ''}>-- NULL --</option>
+                            <option value="ORDER" ${currentStatus === 'ORDER' ? 'selected' : ''}>ORDER</option>
+                            <option value="SPEC" ${currentStatus === 'SPEC' ? 'selected' : ''}>SPEC</option>
+                        </select>
+                    </td>
                 </tr>
-            `).join('');
+            `}).join('');
         }
 
-        // --- Modal & Upload Logic ---
+        function getStatusColor(val) {
+            if (val === 'ORDER') return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+            if (val === 'SPEC') return 'bg-blue-100 text-blue-800 border border-blue-300';
+            return 'bg-slate-100 text-slate-600 border border-slate-300';
+        }
+
+        // Update Status Langsung ke Supabase
+        async function updateRowStatus(id, newValue) {
+            const finalVal = newValue === 'NULL' ? null : newValue;
+            try {
+                const res = await fetch(`${SUPABASE_URL}?id=eq.${id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'apikey': SUPABASE_KEY,
+                        'Authorization': `Bearer ${SUPABASE_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status_final: finalVal })
+                });
+                if(res.ok) {
+                    const item = rawData.find(d => d.id === id);
+                    if(item) item.status_final = finalVal;
+                    renderTable();
+                } else {
+                    alert('Gagal mengupdate status!');
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        // --- Drag and Drop Handlers ---
+        const dropZone = document.getElementById('drop-zone');
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+            }, false);
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFileSelect(files);
+        });
+
+        function handleFileSelect(files) {
+            if (files.length > 0) {
+                selectedFile = files[0];
+                const fileNameDiv = document.getElementById('selected-file-name');
+                fileNameDiv.innerText = `File Terpilih: ${selectedFile.name}`;
+                fileNameDiv.classList.remove('hidden');
+            }
+        }
+
         function openModal() {
             document.getElementById('upload-modal').classList.remove('hidden');
         }
@@ -246,80 +380,77 @@
         function closeModal() {
             document.getElementById('upload-modal').classList.add('hidden');
             document.getElementById('upload-status').classList.add('hidden');
-            document.getElementById('file-input').value = '';
+            document.getElementById('selected-file-name').classList.add('hidden');
+            selectedFile = null;
         }
 
         async function processUpload() {
-    const fileInput = document.getElementById('file-input');
-    const statusDiv = document.getElementById('upload-status');
-    if(!fileInput.files.length) {
-        alert('Pilih file CSV atau Excel terlebih dahulu!');
-        return;
-    }
-
-    statusDiv.classList.remove('hidden');
-    statusDiv.innerText = 'Membaca file...';
-
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-
-    reader.onload = async function(e) {
-        try {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, {type: 'array', cellDates: true});
-            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
-
-            // Filter hanya baris yang memiliki No / Incident (abaikan baris kosong)
-            const cleanData = jsonData.filter(row => row['Incident'] || row['No']);
-
-            statusDiv.innerText = `Mengunggah ${cleanData.length} data ke Supabase...`;
-
-            // Mapping Kolom CSV ke Supabase
-            const payload = cleanData.map(row => ({
-                no: row['No'] ? parseInt(row['No']) : null,
-                incident: row['Incident'] ? String(row['Incident']) : null,
-                summary: row['Summary'] ? String(row['Summary']) : null,
-                reported_date: row['Reported Date'] ? String(row['Reported Date']) : null,
-                workzone: row['Workzone'] ? String(row['Workzone']) : null,
-                status: row['Status'] ? String(row['Status']) : null,
-                status_date: row['Status Date'] ? String(row['Status Date']) : null,
-                service_id: row['Service ID'] ? String(row['Service ID']) : null,
-                service_no: row['Service No'] ? String(row['Service No']) : null,
-                onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
-                device: row['Device'] ? String(row['Device']) : null,
-                sn_ont: row['SN ONT'] ? String(row['SN ONT']) : null,
-                rk_information: row['RK Information'] ? String(row['RK Information']) : null,
-                ukur: row['UKUR'] ? String(row['UKUR']) : null,
-                status_final: row['STATUS'] ? String(row['STATUS']) : null
-            }));
-
-            const res = await fetch(SUPABASE_URL, {
-                method: 'POST',
-                headers: {
-                    'apikey': SUPABASE_KEY,
-                    'Authorization': `Bearer ${SUPABASE_KEY}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': 'return=minimal'
-                },
-                body: JSON.stringify(payload)
-            });
-
-            if(res.ok) {
-                alert('Data berhasil diupload!');
-                closeModal();
-                loadDataFromSupabase();
-            } else {
-                const err = await res.json();
-                alert('Gagal upload: ' + (err.message || JSON.stringify(err)));
+            const statusDiv = document.getElementById('upload-status');
+            if(!selectedFile) {
+                alert('Pilih atau seret file CSV/Excel terlebih dahulu!');
+                return;
             }
-        } catch(err) {
-            alert('Terjadi kesalahan membaca file!');
-            console.error(err);
+
+            statusDiv.classList.remove('hidden');
+            statusDiv.innerText = 'Membaca file...';
+
+            const reader = new FileReader();
+
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
+
+                    const cleanData = jsonData.filter(row => row['Incident'] || row['No']);
+
+                    statusDiv.innerText = `Mengunggah ${cleanData.length} data ke Supabase...`;
+
+                    const payload = cleanData.map(row => ({
+                        no: row['No'] ? parseInt(row['No']) : null,
+                        incident: row['Incident'] ? String(row['Incident']) : null,
+                        summary: row['Summary'] ? String(row['Summary']) : null,
+                        reported_date: row['Reported Date'] ? String(row['Reported Date']) : null,
+                        workzone: row['Workzone'] ? String(row['Workzone']) : null,
+                        status: row['Status'] ? String(row['Status']) : null,
+                        status_date: row['Status Date'] ? String(row['Status Date']) : null,
+                        service_id: row['Service ID'] ? String(row['Service ID']) : null,
+                        service_no: row['Service No'] ? String(row['Service No']) : null,
+                        onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
+                        device: row['Device'] ? String(row['Device']) : null,
+                        sn_ont: row['SN ONT'] ? String(row['SN ONT']) : null,
+                        rk_information: row['RK Information'] ? String(row['RK Information']) : null,
+                        ukur: row['UKUR'] ? String(row['UKUR']) : null,
+                        status_final: row['STATUS'] ? String(row['STATUS']) : null
+                    }));
+
+                    const res = await fetch(SUPABASE_URL, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': SUPABASE_KEY,
+                            'Authorization': `Bearer ${SUPABASE_KEY}`,
+                            'Content-Type': 'application/json',
+                            'Prefer': 'return=minimal'
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if(res.ok) {
+                        alert('Data berhasil diupload!');
+                        closeModal();
+                        loadDataFromSupabase();
+                    } else {
+                        const err = await res.json();
+                        alert('Gagal upload: ' + (err.message || JSON.stringify(err)));
+                    }
+                } catch(err) {
+                    alert('Terjadi kesalahan membaca file!');
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(selectedFile);
         }
-    };
-    reader.readAsArrayBuffer(file);
-}
 
         async function clearAllData() {
             if(confirm('Apakah Anda yakin ingin menghapus SELURUH data di Supabase?')) {
