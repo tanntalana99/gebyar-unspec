@@ -7,6 +7,7 @@
     <!-- Tailwind CSS & Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -38,7 +39,7 @@
             </div>
         </div>
 
-        <!-- Section 1: KPI & Report Summary (Harian, Mingguan, Bulanan) -->
+        <!-- Section 1: KPI & Report Summary -->
         <div class="space-y-3">
             <div class="flex justify-between items-center">
                 <h2 class="text-sm font-bold text-slate-700 uppercase tracking-wider"><i class="fa-solid fa-chart-line text-red-600"></i> Laporan Evaluasi Performa</h2>
@@ -106,6 +107,39 @@
             </div>
         </div>
 
+        <!-- Section 2: Visualisasi Grafik Tren & Perbandingan -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Grafik 1: Tren Reported Date -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-blue-500"></i> Tren Tiket Masuk (Reported)
+                </h3>
+                <div class="h-56 relative">
+                    <canvas id="chartReported"></canvas>
+                </div>
+            </div>
+
+            <!-- Grafik 2: Tren Closed Date -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line text-emerald-500"></i> Tren Tiket Selesai (Closed)
+                </h3>
+                <div class="h-56 relative">
+                    <canvas id="chartClosed"></canvas>
+                </div>
+            </div>
+
+            <!-- Grafik 3: Perbandingan Tiket Masuk vs Closed -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
+                <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-scale-balanced text-purple-600"></i> Perbandingan (Reported vs Closed)
+                </h3>
+                <div class="h-56 relative">
+                    <canvas id="chartComparison"></canvas>
+                </div>
+            </div>
+        </div>
+
         <!-- Filter Controls -->
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
@@ -136,7 +170,7 @@
             </div>
         </div>
 
-        <!-- Tabel Data 15 Kolom dengan Dropdown STATUS -->
+        <!-- Tabel Data -->
         <div class="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse text-xs">
@@ -174,7 +208,6 @@
                 <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
             </div>
             
-            <!-- Drag and Drop Dropzone Zone -->
             <div id="drop-zone" onclick="document.getElementById('file-input').click()" class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center cursor-pointer hover:border-emerald-500 hover:bg-emerald-50/50 transition duration-200">
                 <input type="file" id="file-input" accept=".csv, .xlsx, .xls" class="hidden" onchange="handleFileSelect(this.files)">
                 <div class="space-y-2">
@@ -202,6 +235,44 @@
 
         let rawData = [];
         let selectedFile = null;
+
+        // Instance Chart.js
+        let chartReportedInstance = null;
+        let chartClosedInstance = null;
+        let chartComparisonInstance = null;
+
+        // ------------------------------------------------------------------
+        // Logika Otomatis Hitung Status Redaman (UKUR)
+        // ------------------------------------------------------------------
+        function hitungStatus(ukurVal) {
+            if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
+                return 'NULL';
+            }
+
+            const strVal = String(ukurVal).trim();
+
+            if (strVal === '-') {
+                return 'OFFLINE';
+            }
+
+            const numVal = parseFloat(strVal);
+
+            if (isNaN(numVal)) {
+                return 'NULL';
+            }
+
+            const roundedVal = Math.round(numVal * 100) / 100;
+
+            if (roundedVal <= -23.00) {
+                return 'UNSPEC';
+            }
+
+            if (roundedVal <= -14.00 && roundedVal >= -22.59) {
+                return 'SPEC';
+            }
+
+            return 'NULL';
+        }
 
         async function loadDataFromSupabase() {
             try {
@@ -246,7 +317,6 @@
                     if (startDate && rDate < startDate) matchDate = false;
                     if (endDate && rDate > endDate) matchDate = false;
 
-                    // Filter Evaluasi Period (Harian, Mingguan, Bulanan)
                     if (reportPeriod === 'today' && rDate !== todayStr) matchDate = false;
                     if (reportPeriod === 'weekly') {
                         const past7 = new Date();
@@ -267,7 +337,7 @@
                 return matchWz && matchSt && matchDate && matchSearch;
             });
 
-            // Update Report Cards Evaluasi
+            // Update Executive Summary Stats
             const totalCount = filtered.length;
             const closeCount = filtered.filter(d => d.status_final && (d.status_final.toUpperCase() === 'ORDER' || d.status_final.toUpperCase() === 'SPEC')).length;
             const openCount = totalCount - closeCount;
@@ -302,21 +372,114 @@
                     <td class="p-2">
                         <select onchange="updateRowStatus(${d.id}, this.value)" class="px-2 py-1 rounded text-xs font-bold ${getStatusColor(currentStatus)}">
                             <option value="NULL" ${currentStatus === 'NULL' ? 'selected' : ''}>-- NULL --</option>
-                            <option value="ORDER" ${currentStatus === 'ORDER' ? 'selected' : ''}>ORDER</option>
                             <option value="SPEC" ${currentStatus === 'SPEC' ? 'selected' : ''}>SPEC</option>
+                            <option value="UNSPEC" ${currentStatus === 'UNSPEC' ? 'selected' : ''}>UNSPEC</option>
+                            <option value="OFFLINE" ${currentStatus === 'OFFLINE' ? 'selected' : ''}>OFFLINE</option>
+                            <option value="ORDER" ${currentStatus === 'ORDER' ? 'selected' : ''}>ORDER</option>
                         </select>
                     </td>
                 </tr>
             `}).join('');
+
+            // Render Visual Charts
+            renderCharts(filtered);
         }
 
         function getStatusColor(val) {
-            if (val === 'ORDER') return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
-            if (val === 'SPEC') return 'bg-blue-100 text-blue-800 border border-blue-300';
+            if (val === 'SPEC') return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+            if (val === 'UNSPEC') return 'bg-rose-100 text-rose-800 border border-rose-300';
+            if (val === 'OFFLINE') return 'bg-amber-100 text-amber-800 border border-amber-300';
+            if (val === 'ORDER') return 'bg-blue-100 text-blue-800 border border-blue-300';
             return 'bg-slate-100 text-slate-600 border border-slate-300';
         }
 
-        // Update Status Langsung ke Supabase
+        function renderCharts(data) {
+            const reportedGroup = {};
+            const closedGroup = {};
+            const allDatesSet = new Set();
+
+            data.forEach(d => {
+                if (d.reported_date) {
+                    const rDate = String(d.reported_date).substring(0, 10);
+                    reportedGroup[rDate] = (reportedGroup[rDate] || 0) + 1;
+                    allDatesSet.add(rDate);
+                }
+
+                const isClosed = d.status_final && (d.status_final.toUpperCase() === 'ORDER' || d.status_final.toUpperCase() === 'SPEC');
+                if (isClosed && (d.status_date || d.reported_date)) {
+                    const cDate = String(d.status_date || d.reported_date).substring(0, 10);
+                    closedGroup[cDate] = (closedGroup[cDate] || 0) + 1;
+                    allDatesSet.add(cDate);
+                }
+            });
+
+            const sortedDates = Array.from(allDatesSet).sort();
+
+            const reportedCounts = sortedDates.map(date => reportedGroup[date] || 0);
+            const closedCounts = sortedDates.map(date => closedGroup[date] || 0);
+
+            if (chartReportedInstance) chartReportedInstance.destroy();
+            if (chartClosedInstance) chartClosedInstance.destroy();
+            if (chartComparisonInstance) chartComparisonInstance.destroy();
+
+            const ctxReported = document.getElementById('chartReported').getContext('2d');
+            chartReportedInstance = new Chart(ctxReported, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'Tiket Masuk',
+                        data: reportedCounts,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctxClosed = document.getElementById('chartClosed').getContext('2d');
+            chartClosedInstance = new Chart(ctxClosed, {
+                type: 'line',
+                data: {
+                    labels: sortedDates,
+                    datasets: [{
+                        label: 'Tiket Closed',
+                        data: closedCounts,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+
+            const ctxComparison = document.getElementById('chartComparison').getContext('2d');
+            chartComparisonInstance = new Chart(ctxComparison, {
+                type: 'bar',
+                data: {
+                    labels: sortedDates,
+                    datasets: [
+                        {
+                            label: 'Reported',
+                            data: reportedCounts,
+                            backgroundColor: '#3b82f6'
+                        },
+                        {
+                            label: 'Closed',
+                            data: closedCounts,
+                            backgroundColor: '#10b981'
+                        }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
         async function updateRowStatus(id, newValue) {
             const finalVal = newValue === 'NULL' ? null : newValue;
             try {
@@ -341,7 +504,7 @@
             }
         }
 
-        // --- Drag and Drop Handlers ---
+        // --- Drag & Drop Modal Operations ---
         const dropZone = document.getElementById('drop-zone');
 
         ['dragenter', 'dragover'].forEach(eventName => {
@@ -399,32 +562,79 @@
             reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, {type: 'array', cellDates: true});
+                    const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, {defval: ""});
 
-                    const cleanData = jsonData.filter(row => row['Incident'] || row['No']);
+                    // Konversi Sheet ke Matriks Array (tanpa mengasumsikan header di baris ke-1)
+                    const rawMatrix = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
 
-                    statusDiv.innerText = `Mengunggah ${cleanData.length} data ke Supabase...`;
+                    if (rawMatrix.length === 0) {
+                        alert("File kosong!");
+                        return;
+                    }
 
-                    const payload = cleanData.map(row => ({
-                        no: row['No'] ? parseInt(row['No']) : null,
-                        incident: row['Incident'] ? String(row['Incident']) : null,
-                        summary: row['Summary'] ? String(row['Summary']) : null,
-                        reported_date: row['Reported Date'] ? String(row['Reported Date']) : null,
-                        workzone: row['Workzone'] ? String(row['Workzone']) : null,
-                        status: row['Status'] ? String(row['Status']) : null,
-                        status_date: row['Status Date'] ? String(row['Status Date']) : null,
-                        service_id: row['Service ID'] ? String(row['Service ID']) : null,
-                        service_no: row['Service No'] ? String(row['Service No']) : null,
-                        onu_rx: row['ONU RX'] ? String(row['ONU RX']) : null,
-                        device: row['Device'] ? String(row['Device']) : null,
-                        sn_ont: row['SN ONT'] ? String(row['SN ONT']) : null,
-                        rk_information: row['RK Information'] ? String(row['RK Information']) : null,
-                        ukur: row['UKUR'] ? String(row['UKUR']) : null,
-                        status_final: row['STATUS'] ? String(row['STATUS']) : null
-                    }));
+                    // Cari indeks baris mana yang berisi nama header (seperti Incident / UKUR / Summary)
+                    let headerRowIndex = 0;
+                    for (let i = 0; i < Math.min(10, rawMatrix.length); i++) {
+                        const rowStr = JSON.stringify(rawMatrix[i]);
+                        if (rowStr.includes("Incident") || rowStr.includes("UKUR") || rowStr.includes("Summary")) {
+                            headerRowIndex = i;
+                            break;
+                        }
+                    }
 
+                    const headers = rawMatrix[headerRowIndex].map(h => String(h).trim());
+                    const dataRows = rawMatrix.slice(headerRowIndex + 1);
+
+                    // Pemetaan nama kolom ke indeks array
+                    const getColIdx = (name) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
+
+                    const idxNo = getColIdx('No');
+                    const idxIncident = getColIdx('Incident');
+                    const idxSummary = getColIdx('Summary');
+                    const idxReportedDate = getColIdx('Reported Date');
+                    const idxWorkzone = getColIdx('Workzone');
+                    const idxStatus = getColIdx('Status');
+                    const idxStatusDate = getColIdx('Status Date');
+                    const idxServiceID = getColIdx('Service ID');
+                    const idxServiceNo = getColIdx('Service No');
+                    const idxOnuRx = getColIdx('ONU RX');
+                    const idxDevice = getColIdx('Device');
+                    const idxSnOnt = getColIdx('SN ONT');
+                    const idxRkInfo = getColIdx('RK Information');
+                    const idxUkur = getColIdx('UKUR');
+                    const idxStatusExcel = getColIdx('STATUS');
+
+                    const cleanRows = dataRows.filter(r => r && r.length > 0 && (r[idxIncident] || r[idxNo]));
+
+                    statusDiv.innerText = `Mengunggah ${cleanRows.length} data ke Supabase...`;
+
+                    const payload = cleanRows.map(row => {
+                        const ukurVal = idxUkur !== -1 ? row[idxUkur] : null;
+                        
+                        // Cek jika file excel sudah memiliki kolom STATUS, jika tidak gunakan hitungStatus otomatis
+                        let calculatedStatus = idxStatusExcel !== -1 && row[idxStatusExcel] ? String(row[idxStatusExcel]).trim() : hitungStatus(ukurVal);
+
+                        return {
+                            no: idxNo !== -1 && row[idxNo] ? parseInt(row[idxNo]) : null,
+                            incident: idxIncident !== -1 && row[idxIncident] ? String(row[idxIncident]) : null,
+                            summary: idxSummary !== -1 && row[idxSummary] ? String(row[idxSummary]) : null,
+                            reported_date: idxReportedDate !== -1 && row[idxReportedDate] ? String(row[idxReportedDate]) : null,
+                            workzone: idxWorkzone !== -1 && row[idxWorkzone] ? String(row[idxWorkzone]) : null,
+                            status: idxStatus !== -1 && row[idxStatus] ? String(row[idxStatus]) : null,
+                            status_date: idxStatusDate !== -1 && row[idxStatusDate] ? String(row[idxStatusDate]) : null,
+                            service_id: idxServiceID !== -1 && row[idxServiceID] ? String(row[idxServiceID]) : null,
+                            service_no: idxServiceNo !== -1 && row[idxServiceNo] ? String(row[idxServiceNo]) : null,
+                            onu_rx: idxOnuRx !== -1 && row[idxOnuRx] ? String(row[idxOnuRx]) : null,
+                            device: idxDevice !== -1 && row[idxDevice] ? String(row[idxDevice]) : null,
+                            sn_ont: idxSnOnt !== -1 && row[idxSnOnt] ? String(row[idxSnOnt]) : null,
+                            rk_information: idxRkInfo !== -1 && row[idxRkInfo] ? String(row[idxRkInfo]) : null,
+                            ukur: ukurVal !== null ? String(ukurVal) : null,
+                            status_final: calculatedStatus
+                        };
+                    });
+
+                    // Kirim payload batch ke Supabase API
                     const res = await fetch(SUPABASE_URL, {
                         method: 'POST',
                         headers: {
@@ -437,7 +647,7 @@
                     });
 
                     if(res.ok) {
-                        alert('Data berhasil diupload!');
+                        alert('Data berhasil diupload ke Supabase!');
                         closeModal();
                         loadDataFromSupabase();
                     } else {
