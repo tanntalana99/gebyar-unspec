@@ -472,7 +472,49 @@
                 console.error(e);
             }
         }
+// Fungsi untuk menentukan status berdasarkan nilai UKUR
+function hitungStatus(ukurVal) {
+  // Jika kosong, null, atau undefined
+  if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
+    return 'NULL';
+  }
 
+  const strVal = String(ukurVal).trim();
+
+  // Jika berisi tanda -
+  if (strVal === '-') {
+    return 'OFFLINE';
+  }
+
+  // Konversi nilai ke angka
+  const numVal = parseFloat(strVal);
+
+  if (isNaN(numVal)) {
+    return 'NULL';
+  }
+
+  // Cek range sesuai logika
+  // SPEC: -14.00 s/d -22.59
+  if (numVal <= -14.00 && numVal >= -22.59) {
+    return 'SPEC';
+  }
+  
+  // UNSPEC: mulai -23.00 ke bawah (misal -23.01, -25.00, -30.00)
+  if (numVal <= -23.00) {
+    return 'UNSPEC';
+  }
+
+  return 'NULL';
+}
+
+// Contoh penggunaan saat membaca baris Excel
+dataExcel.forEach(row => {
+  // Ambil nilai dari kolom UKUR
+  const nilaiUkur = row['UKUR'];
+  
+  // Isi otomatis kolom STATUS (kolom terakhir)
+  row['STATUS'] = hitungStatus(nilaiUkur);
+});
         // --- Drag & Drop Modal Operations ---
         const dropZone = document.getElementById('drop-zone');
 
