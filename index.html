@@ -15,6 +15,8 @@
         .zebra-odd { background-color: #f8fafc; }
         .zebra-even:hover, .zebra-odd:hover { background-color: #f1f5f9; }
         .drag-over { border-color: #10b981 !important; background-color: #ecfdf5 !important; }
+        th.sortable { cursor: pointer; user-select: none; }
+        th.sortable:hover { background-color: #334155; }
     </style>
 </head>
 <body class="p-4 md:p-6">
@@ -109,7 +111,6 @@
 
         <!-- Section 2: Visualisasi Grafik Tren & Perbandingan -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Grafik 1: Tren Reported Date -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
                 <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-chart-line text-blue-500"></i> Tren Tiket Masuk (Reported)
@@ -119,7 +120,6 @@
                 </div>
             </div>
 
-            <!-- Grafik 2: Tren Closed Date -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
                 <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-chart-line text-emerald-500"></i> Tren Tiket Selesai (Closed)
@@ -129,7 +129,6 @@
                 </div>
             </div>
 
-            <!-- Grafik 3: Perbandingan Tiket Masuk vs Closed -->
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-3">
                 <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-2">
                     <i class="fa-solid fa-scale-balanced text-purple-600"></i> Perbandingan (Reported vs Closed)
@@ -155,6 +154,18 @@
                         <option value="ALL">-- SEMUA STATUS --</option>
                     </select>
                 </div>
+                <!-- FILTER BARU: STATUS FINAL EDITABLE -->
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-emerald-700 uppercase"><i class="fa-solid fa-filter"></i> Status Final:</label>
+                    <select id="filter-status-final" onchange="renderTable()" class="px-3 py-2 border rounded-lg text-sm bg-emerald-50 font-bold text-emerald-800 border-emerald-300">
+                        <option value="ALL">-- SEMUA STATUS FINAL --</option>
+                        <option value="NULL">NULL (Belum Update)</option>
+                        <option value="SPEC">SPEC</option>
+                        <option value="UNSPEC">UNSPEC</option>
+                        <option value="OFFLINE">OFFLINE</option>
+                        <option value="ORDER">ORDER</option>
+                    </select>
+                </div>
                 <div class="flex items-center gap-2">
                     <label class="text-xs font-bold text-slate-600 uppercase">Dari:</label>
                     <input type="date" id="filter-date-start" onchange="renderTable()" class="px-2 py-1.5 border rounded-lg text-sm bg-white text-slate-700">
@@ -176,21 +187,21 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-700 text-white font-semibold text-center uppercase tracking-wider">
-                            <th class="p-2.5">No</th>
-                            <th class="p-2.5 min-w-[110px]">Incident</th>
+                            <th onclick="sortTable('no')" class="p-2.5 sortable">No <i id="sort-icon-no" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
+                            <th onclick="sortTable('incident')" class="p-2.5 min-w-[110px] sortable">Incident <i id="sort-icon-incident" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
                             <th class="p-2.5 min-w-[220px]">Summary</th>
-                            <th class="p-2.5 min-w-[120px]">Reported Date</th>
-                            <th class="p-2.5">Workzone</th>
-                            <th class="p-2.5">Status</th>
-                            <th class="p-2.5 min-w-[120px]">Status Date</th>
+                            <th onclick="sortTable('reported_date')" class="p-2.5 min-w-[120px] sortable">Reported Date <i id="sort-icon-reported_date" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
+                            <th onclick="sortTable('workzone')" class="p-2.5 sortable">Workzone <i id="sort-icon-workzone" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
+                            <th onclick="sortTable('status')" class="p-2.5 sortable">Status <i id="sort-icon-status" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
+                            <th onclick="sortTable('status_date')" class="p-2.5 min-w-[120px] sortable">Status Date <i id="sort-icon-status_date" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
                             <th class="p-2.5 min-w-[110px]">Service ID</th>
                             <th class="p-2.5 min-w-[110px]">Service No</th>
                             <th class="p-2.5">ONU RX</th>
                             <th class="p-2.5 min-w-[180px]">Device</th>
                             <th class="p-2.5 min-w-[140px]">SN ONT</th>
                             <th class="p-2.5 min-w-[130px]">RK Information</th>
-                            <th class="p-2.5 min-w-[110px]">UKUR</th>
-                            <th class="p-2.5 min-w-[120px]">STATUS (EDITABLE)</th>
+                            <th onclick="sortTable('ukur')" class="p-2.5 min-w-[110px] sortable">UKUR <i id="sort-icon-ukur" class="fa-solid fa-sort ml-1 opacity-60"></i></th>
+                            <th onclick="sortTable('status_final')" class="p-2.5 min-w-[120px] sortable bg-slate-800">STATUS (EDITABLE) <i id="sort-icon-status_final" class="fa-solid fa-sort ml-1 text-yellow-400"></i></th>
                         </tr>
                     </thead>
                     <tbody id="table-body"></tbody>
@@ -236,41 +247,24 @@
         let rawData = [];
         let selectedFile = null;
 
+        // State untuk Sorting (Pengurutan)
+        let currentSortColumn = null;
+        let isSortAsc = true;
+
         // Instance Chart.js
         let chartReportedInstance = null;
         let chartClosedInstance = null;
         let chartComparisonInstance = null;
 
-        // ------------------------------------------------------------------
-        // Logika Otomatis Hitung Status Redaman (UKUR)
-        // ------------------------------------------------------------------
         function hitungStatus(ukurVal) {
-            if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') {
-                return 'NULL';
-            }
-
+            if (ukurVal === null || ukurVal === undefined || String(ukurVal).trim() === '') return 'NULL';
             const strVal = String(ukurVal).trim();
-
-            if (strVal === '-') {
-                return 'OFFLINE';
-            }
-
+            if (strVal === '-') return 'OFFLINE';
             const numVal = parseFloat(strVal);
-
-            if (isNaN(numVal)) {
-                return 'NULL';
-            }
-
+            if (isNaN(numVal)) return 'NULL';
             const roundedVal = Math.round(numVal * 100) / 100;
-
-            if (roundedVal <= -23.00) {
-                return 'UNSPEC';
-            }
-
-            if (roundedVal <= -14.00 && roundedVal >= -22.59) {
-                return 'SPEC';
-            }
-
+            if (roundedVal <= -23.00) return 'UNSPEC';
+            if (roundedVal <= -14.00 && roundedVal >= -22.59) return 'SPEC';
             return 'NULL';
         }
 
@@ -297,9 +291,30 @@
             stSelect.innerHTML = '<option value="ALL">-- SEMUA STATUS --</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
         }
 
+        function sortTable(columnName) {
+            if (currentSortColumn === columnName) {
+                isSortAsc = !isSortAsc;
+            } else {
+                currentSortColumn = columnName;
+                isSortAsc = true;
+            }
+
+            // Update icon sorting di header
+            document.querySelectorAll('th.sortable i').forEach(icon => {
+                icon.className = 'fa-solid fa-sort ml-1 opacity-60';
+            });
+            const activeIcon = document.getElementById(`sort-icon-${columnName}`);
+            if (activeIcon) {
+                activeIcon.className = `fa-solid fa-sort-${isSortAsc ? 'up' : 'down'} ml-1 text-yellow-400 opacity-100`;
+            }
+
+            renderTable();
+        }
+
         function renderTable() {
             const wz = document.getElementById('filter-workzone').value;
             const st = document.getElementById('filter-status').value;
+            const stFinal = document.getElementById('filter-status-final').value;
             const startDate = document.getElementById('filter-date-start').value;
             const endDate = document.getElementById('filter-date-end').value;
             const reportPeriod = document.getElementById('report-period').value;
@@ -307,9 +322,13 @@
 
             const todayStr = new Date().toISOString().substring(0, 10);
 
-            const filtered = rawData.filter(d => {
+            let filtered = rawData.filter(d => {
                 const matchWz = wz === 'ALL' || d.workzone === wz;
                 const matchSt = st === 'ALL' || d.status === st;
+
+                // Fitur Filter Status Final
+                const currentStatusStr = d.status_final ? d.status_final.toUpperCase() : 'NULL';
+                const matchStFinal = stFinal === 'ALL' || currentStatusStr === stFinal;
                 
                 let matchDate = true;
                 if (d.reported_date) {
@@ -334,8 +353,29 @@
                     (d.service_id && String(d.service_id).toLowerCase().includes(search)) ||
                     (d.sn_ont && d.sn_ont.toLowerCase().includes(search));
 
-                return matchWz && matchSt && matchDate && matchSearch;
+                return matchWz && matchSt && matchStFinal && matchDate && matchSearch;
             });
+
+            // Fitur Sorting (Pengurutan Data)
+            if (currentSortColumn) {
+                filtered.sort((a, b) => {
+                    let valA = a[currentSortColumn] ?? '';
+                    let valB = b[currentSortColumn] ?? '';
+
+                    if (typeof valA === 'string') valA = valA.toLowerCase();
+                    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+                    // Khusus angka redaman / UKUR
+                    if (currentSortColumn === 'ukur') {
+                        valA = parseFloat(valA) || -999;
+                        valB = parseFloat(valB) || -999;
+                    }
+
+                    if (valA < valB) return isSortAsc ? -1 : 1;
+                    if (valA > valB) return isSortAsc ? 1 : -1;
+                    return 0;
+                });
+            }
 
             // Update Executive Summary Stats
             const totalCount = filtered.length;
@@ -381,7 +421,6 @@
                 </tr>
             `}).join('');
 
-            // Render Visual Charts
             renderCharts(filtered);
         }
 
@@ -414,7 +453,6 @@
             });
 
             const sortedDates = Array.from(allDatesSet).sort();
-
             const reportedCounts = sortedDates.map(date => reportedGroup[date] || 0);
             const closedCounts = sortedDates.map(date => closedGroup[date] || 0);
 
@@ -464,16 +502,8 @@
                 data: {
                     labels: sortedDates,
                     datasets: [
-                        {
-                            label: 'Reported',
-                            data: reportedCounts,
-                            backgroundColor: '#3b82f6'
-                        },
-                        {
-                            label: 'Closed',
-                            data: closedCounts,
-                            backgroundColor: '#10b981'
-                        }
+                        { label: 'Reported', data: reportedCounts, backgroundColor: '#3b82f6' },
+                        { label: 'Closed', data: closedCounts, backgroundColor: '#10b981' }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
@@ -499,14 +529,10 @@
                 } else {
                     alert('Gagal mengupdate status!');
                 }
-            } catch(e) {
-                console.error(e);
-            }
+            } catch(e) { console.error(e); }
         }
 
-        // --- Drag & Drop Modal Operations ---
         const dropZone = document.getElementById('drop-zone');
-
         ['dragenter', 'dragover'].forEach(eventName => {
             dropZone.addEventListener(eventName, (e) => {
                 e.preventDefault();
@@ -522,9 +548,7 @@
         });
 
         dropZone.addEventListener('drop', (e) => {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFileSelect(files);
+            handleFileSelect(e.dataTransfer.files);
         });
 
         function handleFileSelect(files) {
@@ -536,10 +560,7 @@
             }
         }
 
-        function openModal() {
-            document.getElementById('upload-modal').classList.remove('hidden');
-        }
-
+        function openModal() { document.getElementById('upload-modal').classList.remove('hidden'); }
         function closeModal() {
             document.getElementById('upload-modal').classList.add('hidden');
             document.getElementById('upload-status').classList.add('hidden');
@@ -558,22 +579,18 @@
             statusDiv.innerText = 'Membaca file...';
 
             const reader = new FileReader();
-
             reader.onload = async function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, {type: 'array'});
                     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
 
-                    // Konversi Sheet ke Matriks Array (tanpa mengasumsikan header di baris ke-1)
                     const rawMatrix = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: "" });
-
                     if (rawMatrix.length === 0) {
                         alert("File kosong!");
                         return;
                     }
 
-                    // Cari indeks baris mana yang berisi nama header (seperti Incident / UKUR / Summary)
                     let headerRowIndex = 0;
                     for (let i = 0; i < Math.min(10, rawMatrix.length); i++) {
                         const rowStr = JSON.stringify(rawMatrix[i]);
@@ -586,7 +603,6 @@
                     const headers = rawMatrix[headerRowIndex].map(h => String(h).trim());
                     const dataRows = rawMatrix.slice(headerRowIndex + 1);
 
-                    // Pemetaan nama kolom ke indeks array
                     const getColIdx = (name) => headers.findIndex(h => h.toLowerCase() === name.toLowerCase());
 
                     const idxNo = getColIdx('No');
@@ -606,13 +622,10 @@
                     const idxStatusExcel = getColIdx('STATUS');
 
                     const cleanRows = dataRows.filter(r => r && r.length > 0 && (r[idxIncident] || r[idxNo]));
-
                     statusDiv.innerText = `Mengunggah ${cleanRows.length} data ke Supabase...`;
 
                     const payload = cleanRows.map(row => {
                         const ukurVal = idxUkur !== -1 ? row[idxUkur] : null;
-                        
-                        // Cek jika file excel sudah memiliki kolom STATUS, jika tidak gunakan hitungStatus otomatis
                         let calculatedStatus = idxStatusExcel !== -1 && row[idxStatusExcel] ? String(row[idxStatusExcel]).trim() : hitungStatus(ukurVal);
 
                         return {
@@ -634,7 +647,6 @@
                         };
                     });
 
-                    // Kirim payload batch ke Supabase API
                     const res = await fetch(SUPABASE_URL, {
                         method: 'POST',
                         headers: {
@@ -676,9 +688,7 @@
                         alert('Seluruh data berhasil dihapus.');
                         loadDataFromSupabase();
                     }
-                } catch(e) {
-                    alert('Gagal menghapus data.');
-                }
+                } catch(e) { alert('Gagal menghapus data.'); }
             }
         }
 
